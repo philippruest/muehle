@@ -235,8 +235,8 @@ class MainWindow(QMainWindow):
                 self.grid.addWidget(w, y, x)
                 # Connect signal to handle expansion.
                 w.clicked.connect(self.make_move)
-                #w.expandable.connect(self.expand_reveal)
-                #w.ohno.connect(self.game_over)
+                # w.expandable.connect(self.expand_reveal)
+                # w.ohno.connect(self.game_over)
     def make_move(self, x, y):
         selected_tile = self.grid.itemAtPosition(y, x).widget()
 
