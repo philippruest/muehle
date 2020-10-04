@@ -19,7 +19,7 @@ STATUS_PLAYING = 1
 STATUS_FAILED = 2
 STATUS_SUCCESS = 3
 
-NUM_STONES = 3
+NUM_STONES = 5
 
 
 class Player:
@@ -62,14 +62,6 @@ class Pos(QWidget):
         self.y = y
         self.color = Player.COLOR_NONE
 
-    def reset(self):
-        self.is_start = False
-        self.is_mine = False
-        self.adjacent_n = 0
-
-        self.is_revealed = False
-        self.is_flagged = False
-
         self.update()
 
     def paintEvent(self, event):
@@ -78,38 +70,6 @@ class Pos(QWidget):
 
         r = event.rect()
 
-        '''
-        if self.is_revealed:
-            color = self.palette().color(QPalette.Background)
-            outer, inner = color, color
-        else:
-            outer, inner = Qt.gray, Qt.lightGray
-        
-        
-        p.fillRect(r, QBrush(inner))
-        pen = QPen(outer)
-        pen.setWidth(1)
-        p.setPen(pen)
-        p.drawRect(r)
-
-        if self.is_revealed:
-            if self.is_start:
-                p.drawPixmap(r, QPixmap(IMG_START))
-
-            elif self.is_mine:
-                p.drawPixmap(r, QPixmap(IMG_BOMB))
-
-            elif self.adjacent_n > 0:
-                pen = QPen(NUM_COLORS[self.adjacent_n])
-                p.setPen(pen)
-                f = p.font()
-                f.setBold(True)
-                p.setFont(f)
-                p.drawText(r, Qt.AlignHCenter | Qt.AlignVCenter, str(self.adjacent_n))
-
-        elif self.is_flagged:
-            p.drawPixmap(r, QPixmap(IMG_FLAG))
-        '''
         img_name = './images/id_' + str(self.y) + str(self.x) + '.png'
         p.drawPixmap(r, QPixmap(img_name))
 
@@ -128,29 +88,12 @@ class Pos(QWidget):
         p.drawText(r, Qt.AlignHCenter | Qt.AlignVCenter, str(self.tile_id))
         '''
 
-    def flag(self):
-        self.is_flagged = True
-        self.update()
-
-        self.clicked.emit()
-
-    def unflag(self):
-        self.is_flagged = False
-        self.update()
-
-        self.clicked.emit()
 
     def reveal(self):
         self.is_revealed = True
         self.update()
 
     def click(self):
-        '''if not self.is_revealed:
-            self.reveal()
-            if self.adjacent_n == 0:
-                self.expandable.emit(self.x, self.y)
-
-        '''
         if self.tile_id == 0:
             return
 
@@ -179,6 +122,7 @@ class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
 
+        # general game stuff
         self.selected_tiles = [-1, -1]
 
         self.idMap = [[1, 0, 0, 8, 0, 0, 7],
@@ -190,26 +134,28 @@ class MainWindow(QMainWindow):
                       [3, 0, 0, 4, 0, 0, 5]]
 
         self.players = [Player(Player.COLOR_WHITE), Player(Player.COLOR_BLACK)]
-        self.players[0].name = 'wPhilipp'
-        self.players[1].name = 'bAnnika'
+        self.players[0].name = 'Philipp'
+        self.players[1].name = 'Annika'
 
         w = QWidget()
+
+        # upper line
         hb = QHBoxLayout()
 
-        self.whiteStatus = QLabel()
-        self.whiteStatus.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        self.white_name = QLabel()
+        self.white_name.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
 
-        self.blackStatus = QLabel()
-        self.blackStatus.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        self.black_name = QLabel()
+        self.black_name.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
 
-        f = self.whiteStatus.font()
+        f = self.white_name.font()
         f.setPointSize(12)
         f.setWeight(75)
-        self.whiteStatus.setFont(f)
-        self.blackStatus.setFont(f)
+        self.white_name.setFont(f)
+        self.black_name.setFont(f)
 
-        self.whiteStatus.setText(self.players[0].name)
-        self.blackStatus.setText(self.players[1].name)
+        self.white_name.setText(self.players[0].name)
+        self.black_name.setText(self.players[1].name)
 
         self.button = QPushButton()
         self.button.setFixedSize(QSize(32, 32))
@@ -219,28 +165,53 @@ class MainWindow(QMainWindow):
 
         self.button.pressed.connect(self.button_pressed)
 
-        l = QLabel()
-        l.setPixmap(QPixmap.fromImage(IMG_WHITE))
-        l.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        hb.addWidget(l)
+        self.lbl_stonesInHandWhite = QLabel()
+        self.lbl_stonesInHandWhite.setStyleSheet("QLabel {color : black; background-image: url('./images/white.png'); "
+                                                 "background-repeat: no-repeat; background-position: center}")
+        self.lbl_stonesInHandWhite.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        self.lbl_stonesInHandWhite.setText('9')
+        hb.addWidget(self.lbl_stonesInHandWhite)
 
-        hb.addWidget(self.whiteStatus)
+        hb.addWidget(self.white_name)
         hb.addWidget(self.button)
-        hb.addWidget(self.blackStatus)
+        hb.addWidget(self.black_name)
 
-        l = QLabel()
-        l.setPixmap(QPixmap.fromImage(IMG_BLACK))
-        l.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        hb.addWidget(l)
+        self.lbl_stonesInHandBlack = QLabel()
+        self.lbl_stonesInHandBlack.setStyleSheet("QLabel {color : white; background-image: url('./images/black.png'); "
+                                                 "background-repeat: no-repeat; background-position: center}")
+        self.lbl_stonesInHandBlack.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        self.lbl_stonesInHandBlack.setText('9')
+        hb.addWidget(self.lbl_stonesInHandBlack)
 
         vb = QVBoxLayout()
         vb.addLayout(hb)
 
+        # lower line
+        hb = QHBoxLayout()
+        vb1 = QVBoxLayout()
+        self.white_action = QLabel('white action')
+        self.white_phase = QLabel('white phase')
+        vb1.addWidget(self.white_phase)
+        vb1.addWidget(self.white_action)
+        hb.addLayout(vb1)
+
+        vb1 = QVBoxLayout()
+        vb1.setAlignment(Qt.AlignRight)
+        self.black_action = QLabel('black action')
+        self.black_phase = QLabel('black phase')
+        vb1.addWidget(self.black_phase)
+        vb1.addWidget(self.black_action)
+        hb.addLayout(vb1)
+
+        vb.addLayout(hb)
+
+        # game board
         self.grid = QGridLayout()
         self.grid.setSpacing(0)
 
         vb.addLayout(self.grid)
         w.setLayout(vb)
+
         self.setCentralWidget(w)
         self.init_map()
 
@@ -249,13 +220,7 @@ class MainWindow(QMainWindow):
         self.show()
 
     def button_pressed(self):
-        if self.status == STATUS_PLAYING:
-            self.update_status(STATUS_FAILED)
-            self.reveal_map()
-
-        elif self.status == STATUS_FAILED:
-            self.update_status(STATUS_READY)
-            self.reset_map()
+        self.reset_map()
 
     def init_map(self):
         # Add positions to the map
@@ -283,10 +248,9 @@ class MainWindow(QMainWindow):
             # moving phase
             elif self.activePlayer.phase == Player.PHASE_MOVE:
                 if self.selected_tiles[0] == -1:
-                    if selected_tile.color != self.activePlayer.color:
-                        return
-                    else:
+                    if selected_tile.color == self.activePlayer.color:
                         self.selected_tiles[0] = selected_tile
+                        return
                 else:
                     if selected_tile.color != -1:
                         return
@@ -302,28 +266,30 @@ class MainWindow(QMainWindow):
             # Jumping phase
             elif self.activePlayer.phase == Player.PHASE_JUMP:
                 if self.selected_tiles[0] == -1:
-                    self.selected_tiles[0] = selected_tile
-                else:
-                    self.selected_tiles[1] = selected_tile
-                    res = self.check_move(self.selectedTiles[0].tile_id, self.selectedTiles[1].tile_id)
-                    if res != False:
-                        self.selected_tiles[0].color = -1
-                        self.selected_tiles[1].color = self.activePlayer.color
-                        self.selected_tiles = [-1, -1]
-                    else:
+                    if selected_tile.color == self.activePlayer.color:
+                        self.selected_tiles[0] = selected_tile
                         return
+                else:
+                    if selected_tile.color != -1:
+                        return
+                    else:
+                        self.selected_tiles[1] = selected_tile
+                        active_player = self.activePlayer
+                        res = self.check_move(self.selected_tiles[0].tile_id, self.selected_tiles[1].tile_id)
+                        if res != False:
+                            self.selected_tiles[0].color = -1
+                            self.selected_tiles[1].color = active_player.color
+                            self.selected_tiles = [-1, -1]
+                        else:
+                            return
         elif self.activePlayer.action == Player.ACTION_KILL:
             if self.designate_kill(selected_tile.tile_id):
                 selected_tile.color = Player.COLOR_NONE
-                self.activePlayer.phase = Player.ACTION_LMJ
-                self.switch_player()
-
 
         # check lose
         self.check_lose()
 
-        # check possible moves for each player
-
+        self.update_labels()
         self.update()
 
     def check_move(self, oldField, newField):
@@ -342,7 +308,7 @@ class MainWindow(QMainWindow):
                 self.activePlayer.stonesInHand -= 1
                 if self.activePlayer.stonesInHand == 0:
                     self.activePlayer.phase = Player.PHASE_MOVE
-                if self.check_mill(newField):
+                if self.check_mill(newField, self.activePlayer.color) and not self.check_all_mills(not self.activePlayer.color):
                     self.activePlayer.action = Player.ACTION_KILL
                 else:
                     self.switch_player()
@@ -356,17 +322,24 @@ class MainWindow(QMainWindow):
                 return
             self.game.board[oldField] = -1
             self.game.board[newField] = self.activePlayer.color
-            if self.check_mill(newField):
+            if self.check_mill(newField, self.activePlayer.color) and not self.check_all_mills(not self.activePlayer.color):
                 self.activePlayer.action = Player.ACTION_KILL
             else:
                 self.switch_player()
             return oldField, newField
         elif self.activePlayer.phase == Player.PHASE_JUMP:
-            print('implement')
+            if self.game.board[newField] >= 0:
+                print("Place already occupied")
+                return False
+            self.game.board[oldField] = -1
+            self.game.board[newField] = self.activePlayer.color
+            if self.check_mill(newField, self.activePlayer.color) and not self.check_all_mills(not self.activePlayer.color):
+                self.activePlayer.action = Player.ACTION_KILL
+            else:
+                self.switch_player()
+            return oldField, newField
 
-        return
-
-    def check_mill(self, field):
+    def check_mill(self, field, player_color):
         if self.activePlayer.activeStones < 3:
             return False
         for i in range(len(self.game.millPatterns)):
@@ -374,7 +347,7 @@ class MainWindow(QMainWindow):
                 print(self.game.millPatterns[i])
                 found = True
                 for j in range(3):
-                    if self.game.board[self.game.millPatterns[i][j]] != self.activePlayer.color:
+                    if self.game.board[self.game.millPatterns[i][j]] != player_color:
                         found = False
                 if found:
                     print('Found mill')
@@ -389,33 +362,37 @@ class MainWindow(QMainWindow):
             self.activePlayer = self.players[0]
             self.button.setIcon(QIcon("./images/white.png"))
 
-
-
     def designate_kill(self, field):
         if self.game.board[field] == self.activePlayer:
-            print('Dont kill yourself :-)')
+            print('Don\'t kill yourself :-)')
             return False
         if self.game.board[field] == -1:
             print('This field is empty :-)')
+            return False
+        if self.check_mill(field, not self.activePlayer.color):
+            print('You can\'t remove a stone in a mill')
             return False
 
         self.game.board[field] = -1
         self.activePlayer.action = Player.ACTION_LMJ
         self.switch_player()
         self.activePlayer.activeStones -= 1
+        if self.activePlayer.activeStones == 3 and self.activePlayer.stonesInHand == 0:
+            self.activePlayer.phase = Player.PHASE_JUMP
+
         return True
 
     def check_lose(self):
         for player in self.players:
-            # check if the player has >= 3 stones avaialable
-            if player.stonesInHand + player.activeStones < 3:
+            # check if the player has >= 3 stones available
+            if (player.stonesInHand + player.activeStones) < 3:
                 print('Player ' + str(player.color) + ' loses!')
                 return True
 
         # check if players can still make a move
-        if not self.check_player_free(0):
+        if not self.check_player_free(0) and self.players[0].activeStones > 0:
             print('Player 0 loses')
-        if not self.check_player_free(1):
+        if not self.check_player_free(1) and self.players[1].activeStones > 0:
             print('Player 1 loses')
 
     def check_player_free(self, player):
@@ -430,6 +407,22 @@ class MainWindow(QMainWindow):
                     player_free = True
                     break
         return player_free
+
+    def check_all_mills(self, player_id):
+        for i in range(1, len(self.game.board)):
+            if self.game.board[i] == player_id and not self.check_mill(i, player_id):
+                return False
+
+        return True
+
+    def update_labels(self):
+        self.lbl_stonesInHandWhite.setText(str(self.players[0].stonesInHand))
+        self.lbl_stonesInHandBlack.setText(str(self.players[1].stonesInHand))
+
+        self.white_phase.setText(str(self.players[0].phase))
+        self.black_phase.setText(str(self.players[1].phase))
+        self.white_action.setText(str(self.players[0].action))
+        self.black_action.setText(str(self.players[1].action))
 
 
 if __name__ == '__main__':
