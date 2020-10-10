@@ -1,7 +1,3 @@
-"""
-Test comment
-"""
-
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from GameLogic import MuehleLogic
@@ -19,7 +15,7 @@ STATUS_PLAYING = 1
 STATUS_FAILED = 2
 STATUS_SUCCESS = 3
 
-NUM_STONES = 5
+NUM_STONES = 9
 
 
 class Player:
@@ -79,7 +75,7 @@ class Pos(QWidget):
             p.drawPixmap(r, QPixmap(IMG_BLACK))
 
         ''' 
-        # for deubgging
+        # for debugging
         pen = QPen(QColor('#f44336'))
         p.setPen(pen)
         f = p.font()
@@ -88,11 +84,6 @@ class Pos(QWidget):
         p.drawText(r, Qt.AlignHCenter | Qt.AlignVCenter, str(self.tile_id))
         '''
 
-
-    def reveal(self):
-        self.is_revealed = True
-        self.update()
-
     def click(self):
         if self.tile_id == 0:
             return
@@ -100,21 +91,6 @@ class Pos(QWidget):
         self.clicked.emit(self.x, self.y)
 
     def mouseReleaseEvent(self, e):
-        '''
-        # do only input decision here, no logics
-        if (e.button() == Qt.RightButton and not self.is_revealed and not self.is_flagged):
-            self.flag()
-
-        elif (e.button() == Qt.RightButton and self.is_flagged):
-            self.unflag()
-
-        elif (e.button() == Qt.LeftButton):
-            self.click()
-
-            if self.is_mine:
-                self.ohno.emit()
-        '''
-
         self.click()
 
 
@@ -230,8 +206,6 @@ class MainWindow(QMainWindow):
                 self.grid.addWidget(w, y, x)
                 # Connect signal to handle expansion.
                 w.clicked.connect(self.tile_clicked)
-                # w.expandable.connect(self.expand_reveal)
-                # w.ohno.connect(self.game_over)
 
     def tile_clicked(self, x, y):
         selected_tile = self.grid.itemAtPosition(y, x).widget()
@@ -241,7 +215,7 @@ class MainWindow(QMainWindow):
             if self.activePlayer.phase == Player.PHASE_LAY:
                 active_player = self.activePlayer
                 res = self.check_move(0, selected_tile.tile_id)
-                if res != False:
+                if res:
                     selected_tile.color = active_player.color
                 else:
                     return
@@ -257,7 +231,7 @@ class MainWindow(QMainWindow):
                     active_player = self.activePlayer
                     self.selected_tiles[1] = selected_tile
                     res = self.check_move(self.selected_tiles[0].tile_id, self.selected_tiles[1].tile_id)
-                    if res != False:
+                    if res:
                         self.selected_tiles[0].color = Player.COLOR_NONE
                         self.selected_tiles[1].color = active_player.color
                         self.selected_tiles = [-1, -1]
@@ -276,7 +250,7 @@ class MainWindow(QMainWindow):
                         self.selected_tiles[1] = selected_tile
                         active_player = self.activePlayer
                         res = self.check_move(self.selected_tiles[0].tile_id, self.selected_tiles[1].tile_id)
-                        if res != False:
+                        if res:
                             self.selected_tiles[0].color = -1
                             self.selected_tiles[1].color = active_player.color
                             self.selected_tiles = [-1, -1]
@@ -288,56 +262,59 @@ class MainWindow(QMainWindow):
 
         # check lose
         self.check_lose()
-
         self.update_labels()
+
         self.update()
 
-    def check_move(self, oldField, newField):
+    def check_move(self, old_field, new_field):
         # check if move is allowed
-        if oldField == newField:
+        if old_field == new_field:
             print("Using the same field is not allowed")
             return False
 
         if self.activePlayer.phase == Player.PHASE_LAY:
-            if self.game.board[newField] >= 0:
+            if self.game.board[new_field] >= 0:
                 print("Place already occupied")
                 return False
             else:
-                self.game.board[newField] = self.activePlayer.color
+                self.game.board[new_field] = self.activePlayer.color
                 self.activePlayer.activeStones += 1
                 self.activePlayer.stonesInHand -= 1
                 if self.activePlayer.stonesInHand == 0:
                     self.activePlayer.phase = Player.PHASE_MOVE
-                if self.check_mill(newField, self.activePlayer.color) and not self.check_all_mills(not self.activePlayer.color):
+                if self.check_mill(new_field, self.activePlayer.color) and \
+                        not self.check_all_mills(not self.activePlayer.color):
                     self.activePlayer.action = Player.ACTION_KILL
                 else:
                     self.switch_player()
-                return oldField, newField
+                return True
         elif self.activePlayer.phase == Player.PHASE_MOVE:
-            if newField not in self.game.neighbours[oldField]:
+            if new_field not in self.game.neighbours[old_field]:
                 print("Not neighbours")
                 return False
-            if self.game.board[newField] >= 0:
+            if self.game.board[new_field] >= 0:
                 print("Place already occupied")
                 return
-            self.game.board[oldField] = -1
-            self.game.board[newField] = self.activePlayer.color
-            if self.check_mill(newField, self.activePlayer.color) and not self.check_all_mills(not self.activePlayer.color):
+            self.game.board[old_field] = -1
+            self.game.board[new_field] = self.activePlayer.color
+            if self.check_mill(new_field, self.activePlayer.color) and \
+                    not self.check_all_mills(not self.activePlayer.color):
                 self.activePlayer.action = Player.ACTION_KILL
             else:
                 self.switch_player()
-            return oldField, newField
+            return old_field, new_field
         elif self.activePlayer.phase == Player.PHASE_JUMP:
-            if self.game.board[newField] >= 0:
+            if self.game.board[new_field] >= 0:
                 print("Place already occupied")
                 return False
-            self.game.board[oldField] = -1
-            self.game.board[newField] = self.activePlayer.color
-            if self.check_mill(newField, self.activePlayer.color) and not self.check_all_mills(not self.activePlayer.color):
+            self.game.board[old_field] = -1
+            self.game.board[new_field] = self.activePlayer.color
+            if self.check_mill(new_field, self.activePlayer.color) and \
+                    not self.check_all_mills(not self.activePlayer.color):
                 self.activePlayer.action = Player.ACTION_KILL
             else:
                 self.switch_player()
-            return oldField, newField
+            return True
 
     def check_mill(self, field, player_color):
         if self.activePlayer.activeStones < 3:
